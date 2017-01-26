@@ -1,4 +1,3 @@
-import pdb
 import sys
 
 
@@ -148,7 +147,7 @@ def parse_local_part(cmd, pos):
 
 def parse_domain(cmd, pos):
     '''
-    parse <domain> by checking whether if 
+    parse <domain> by checking whether if
     the domain has at list one a followed by let-dig-str
     '''
     # pdb.set_trace()
