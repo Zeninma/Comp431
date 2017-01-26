@@ -1,0 +1,31 @@
+MAIL FROM <kjeffay@cs.unc.edu>
+MAIL From:<kjeffay@cs.unc.edu>
+MAILFROM: <kjeffay@cs.unc.edu>
+MAIL FROM: <kjeffay@cs.unc.edu>
+MAIL FROM:<>
+MAIL FROM:<@cs.unc.edu>
+MAIL FROM:<kjeffaycs.unc.edu>
+MAIL FROM:<kjeffay@>
+MAIL FROM:<kjeffay @cs.unc.edu>
+MAIL FROM:<kjeffay	@cs.unc.edu>
+MAIL FROM:<kjeffay<@cs.unc.edu>
+MAIL FROM:<kjeffay>@cs.unc.edu>
+MAIL FROM:<kjeffay(@cs.unc.edu>
+MAIL FROM:<kjeffay)@cs.unc.edu>
+MAIL FROM:<kjeffay[@cs.unc.edu>
+MAIL FROM:<kjeffay]@cs.unc.edu>
+MAIL FROM:<kjeffay\@cs.unc.edu>
+MAIL FROM:<kjeffay.@cs.unc.edu>
+MAIL FROM:<kjeffay,@cs.unc.edu>
+MAIL FROM:<kjeffay;@cs.unc.edu>
+MAIL FROM:<kjeffay:@cs.unc.edu>
+MAIL FROM:<kjeffay"@cs.unc.edu>
+MAIL FROM:<kjeffay@c$.unc.edu>
+MAIL FROM:<kjeffay@cs.u%c.edu>
+MAIL FROM:<kjeffay@cs.unc.e*u>
+MAIL FROM:<kjeffay@.>
+MAIL FROM:<kjeffay@cs.unc.1du>
+MAIL FROM:<kjeffay@cs.2nc.edu>
+MAIL FROM:<kjeffay@3s.unc.edu>
+MAIL FROM:<kjeffay@#s.unc.edu>
+MAIL FROM:<kjeffay@cs.unc.>

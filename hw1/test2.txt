@@ -1,0 +1,42 @@
+MAIL FROM:<hello@googl.com>
+MAIL FRom:<hello@google>
+MAIL FROM: <hello@google>
+MAIL FROM:<HELLO@goo.me.se.se>
+MAIL FROM:<doggg@me.com>
+:<cat@google>
+MAIL FROM:< welcome@me>
+MAIL FROM:cat@dude>
+MAIL FROM:<[dude@Qdude]>
+MAIL FROM:<du:de@google>
+MAIL FROM:<he ma@dog.com>
+MAIL FROM:<hadoop @totally>
+MAIL FROM:<¥@daa.edu.net>
+MAIL FROM: <me@you>
+MAIL FROM:<sup@sup>
+MAIL FROM:<kjnkjnkjnk>
+MAIL FROM:<dog@$meee>
+MAIL FROM:<dog@:meee>>
+MAIL FROM:<dog@9a>
+MAIL FROM:<dog@a9>
+MAIL FROM:<dog@aa>
+MAIL FROM:<dog@¥a>
+MAIL FROM:<dog@ aws>
+MAIL FROM:<dog@aws.edu..net>
+MAIL FROM:<dog@dog.dog.dog>
+MAIL FROM:<dog@a9.9a>
+MAIL FROM:<dog@a9.a9.a9>
+MAIL FROM:<dog@ZZ.XX>
+MAIL FROM:<dog@A9.A9.@.ee>
+MAIL FROM:<dog!@me.me>
+MAIL: FROM:<dog@me>
+MAIL:FROM<yo@yo>
+MAIL FROM: a <kjjhnk@Kjnkj>
+MAIL FROM:<jeffay@cs.unc.edu
+MAIL FROM:<jeffay @cs.unc.edu>
+MAIL FROM:<jeffay@cs.unc.edu >
+MAIL FROM:<jeffay@cs.unc@edu>
+MAIL FROM:<jeff(ay@cs.unc.edu>
+MAIL FROM:<(jeffay@cs.unc.edu>
+MAIL FROM:<jeffay@cs.unc.edu>a
+MAIL FROM: a<jeffay@.cs.unc.edu>
+MAIL FROM:<dog@d.com>
