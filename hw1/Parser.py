@@ -10,7 +10,7 @@ def is_whitespace(character):
     return True if there is one
     '''
     is_space = (character == ' ')
-    is_tab = (character == '    ')
+    is_tab = (character == '\t')
     return is_space or is_tab
 
 
@@ -234,13 +234,11 @@ def parse_mail_from_cmd(cmd, pos):
     if len(cmd) < 10:
         print('ERROR -- mail-from-cmd')
         return 0
-    else:
-        pos += 1
     if cmd[0:4] != 'MAIL':
         print('ERROR -- mail-from-cmd')
         return 0
     else:
-        pos += 3
+        pos += 4
     # now cmd[pos] must be ' '
     pos = parse_whitespace(cmd, pos)
     if pos == 0:

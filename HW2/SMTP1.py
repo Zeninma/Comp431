@@ -358,3 +358,23 @@ def parse_data_cmd(cmd, pos):
         return 1
 
 
+def build_data(data, new_data):
+    '''
+    add new input to the data culmulatively
+    '''
+    data = data + new_data
+    return data
+
+
+def is_end(data, new_data):
+    '''
+    chekc whether the data input is ended
+    '''
+    if (new_data == '.\n') and (data[-1] == '\n'):
+        return True
+    else:
+        return False
+
+
+def construct_email():
+    
