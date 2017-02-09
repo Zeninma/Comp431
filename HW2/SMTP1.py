@@ -1,6 +1,17 @@
 import sys
 import pdb
-from enum import Enum
+
+class SuperEnum(object):
+    '''
+    an Enum built for Python 2.7
+    original source:
+    http://codereview.stackexchange.com/questions/109724/yet-another-lightweight-enum-for-python-2-7
+    '''
+    class __metaclass__(type):
+        def __iter__(self):
+            for item in self.__dict__:
+                if item == self.__dict__[item]:
+                    yield item
 
 '''
 SPECIAL_SPACE are special char and white space specified in
@@ -17,7 +28,7 @@ ERROR503 = "503 Bad sequence of commands"
 SUCCESS = "250 OK"
 DATABEGIN = "354 Start mail input; end with <CRLF>.<CRLF>"
 
-class State(Enum):
+class State(SuperEnum):
     '''
     Enum for state of automaton
     '''
@@ -26,7 +37,7 @@ class State(Enum):
     RCPTORDATA = 3
     DATA = 4
 
-class CommandType(Enum):
+class CommandType(SuperEnum):
     '''
     Enum for command type
     '''
