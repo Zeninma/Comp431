@@ -1,7 +1,8 @@
 import sys
 import pdb
 
-SUCCESS1 = ['250','354']
+SUCCESS = ['250', '354']
+FORWARD_FILE_ERROR = 'ERROR IN ORIGINAL FORWARD FILE'
 
 class SuperEnum(object):
     '''
@@ -30,6 +31,13 @@ class ReaderState(SuperEnum):
     '''
     LISTEN = 1
     DATA_MODE = 2
+
+class Response(SuperEnum):
+    '''
+    an ENUM for response from SMTP server
+    '''
+    OK = 1
+    ERROR = 2
 
 ########################################################################
 #######################Above are helper class, mainly ENUM##############
@@ -73,11 +81,44 @@ class ForwardFileReader():
             else:
                 return CommandType.DATA
 
+    def wait(self):
+        '''
+        wait for SMTP server's response
+        and return status accordingly
+        '''
+
     def start(self):
         '''
         start processing forward file
         '''
         for line in self.lines:
             cmd_type = self.type_check(line)
+            if cmd_type == CommandType.MAIL_FROM:
+                if len(line) > 7:
+                    print('MAIL FROM: ' + line[6:])
+                else:
+                    print(FORWARD_FILE_ERROR)
+                self.wait()
+
+            elif cmd_type == CommandType.RCPT:
+                if len(line) > 4:
+                    print('RCPT TO: ' + line[4:])
+                else:
+                    print(FORWARD_FILE_ERROR)
+                self.wait()
+
+            elif cmd_type == CommandType.NEWSTART:
+                print('.\n')
+                if len(line) > 7:
+                    print('MAIL FROM: ' + line[6:])
+                else:
+                    print(FORWARD_FILE_ERROR)
+                self.wait()
+
+            #Then the line must be a part of the DATA
+            else:
+                print(line)
+                self.wait()
         # out of the for loop, need to type the end Command
         # for the DATA part
+        print('.\n')
