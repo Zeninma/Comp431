@@ -86,6 +86,14 @@ class ForwardFileReader():
         wait for SMTP server's response
         and return status accordingly
         '''
+        raw_response = input()
+        response = raw_response[0:3]
+        sys.stderr.write(response)
+        #echo response to standard error
+        if response in SUCCESS:
+            return Response.OK
+        else:
+            return Response.ERROR
 
     def start(self):
         '''
@@ -98,27 +106,34 @@ class ForwardFileReader():
                     print('MAIL FROM: ' + line[6:])
                 else:
                     print(FORWARD_FILE_ERROR)
-                self.wait()
-
+                if self.wait() == Response.ERROR:
+                    print('QUIT')
+                    return
             elif cmd_type == CommandType.RCPT:
                 if len(line) > 4:
                     print('RCPT TO: ' + line[4:])
                 else:
                     print(FORWARD_FILE_ERROR)
-                self.wait()
-
+                if self.wait() == Response.ERROR:
+                    print('QUIT')
+                    return
             elif cmd_type == CommandType.NEWSTART:
                 print('.\n')
                 if len(line) > 7:
                     print('MAIL FROM: ' + line[6:])
                 else:
                     print(FORWARD_FILE_ERROR)
-                self.wait()
-
+                if self.wait() == Response.ERROR:
+                    print('QUIT')
+                    return
             #Then the line must be a part of the DATA
             else:
                 print(line)
-                self.wait()
+                if self.wait() == Response.ERROR:
+                    print('QUIT')
+                    return
         # out of the for loop, need to type the end Command
         # for the DATA part
         print('.\n')
+        print('QUIT')
+        return
