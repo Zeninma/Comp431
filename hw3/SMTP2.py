@@ -36,7 +36,7 @@ class Response(SuperEnum):
     '''
     an ENUM for response from SMTP server
     '''
-    OK = 1
+    OKM = 1
     ERROR = 2
 
 ########################################################################
@@ -54,14 +54,13 @@ class ForwardFileReader():
         constructor for Forwar_file_reader
         '''
         self.state = ReaderState.LISTEN
-        file = open(file_name, "r")
-        if file.mode == 'r':
-            self.lines = file.readline()
+        self.file = open(file_name, "r")
 
     def type_check(self, line):
         '''
-        check the command type of the input line
-        and return it
+        check the command type of the input line,
+        then echo the input line, and return the
+        command's type
         '''
         line_len = len(line)
         if self.state == ReaderState.LISTEN:
@@ -71,12 +70,17 @@ class ForwardFileReader():
             if line_len > 2:
                 if line[0:3] == 'To:':
                     return CommandType.RCPT
-            else:
-                #the original document has error
-                return CommandType.DATA
+            #the original document has error
+            self.state = ReaderState.DATA_MODE
+            print('DATA \n')
+            if self.wait() == Response.ERROR:
+                print('QUIT')
+                sys.exit(0)
+            return CommandType.DATA
         else:
             if line_len > 4:
                 if line[0:5] == 'From:':
+                    self.state = ReaderState.LISTEN
                     return CommandType.NEWSTART
             else:
                 return CommandType.DATA
@@ -86,12 +90,12 @@ class ForwardFileReader():
         wait for SMTP server's response
         and return status accordingly
         '''
-        raw_response = input()
+        raw_response = input() + '\n'
         response = raw_response[0:3]
-        sys.stderr.write(response)
+        sys.stderr.write(raw_response)
         #echo response to standard error
         if response in SUCCESS:
-            return Response.OK
+            return Response.OKM
         else:
             return Response.ERROR
 
@@ -99,41 +103,44 @@ class ForwardFileReader():
         '''
         start processing forward file
         '''
-        for line in self.lines:
+        for line in self.file.readlines():
+            # pdb.set_trace()
             cmd_type = self.type_check(line)
             if cmd_type == CommandType.MAIL_FROM:
                 if len(line) > 7:
-                    print('MAIL FROM: ' + line[6:])
+                    print('MAIL FROM: ' + line[6:].strip('\n'))
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait() == Response.ERROR:
                     print('QUIT')
-                    return
+                    sys.exit(0)
             elif cmd_type == CommandType.RCPT:
                 if len(line) > 4:
-                    print('RCPT TO: ' + line[4:])
+                    print('RCPT TO: ' + line[4:].strip('\n'))
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait() == Response.ERROR:
                     print('QUIT')
-                    return
+                    sys.exit(0)
             elif cmd_type == CommandType.NEWSTART:
                 print('.\n')
                 if len(line) > 7:
-                    print('MAIL FROM: ' + line[6:])
+                    print('MAIL FROM: ' + line[6:].strip('\n'))
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait() == Response.ERROR:
                     print('QUIT')
-                    return
+                    sys.exit(0)
             #Then the line must be a part of the DATA
             else:
-                print(line)
-                if self.wait() == Response.ERROR:
-                    print('QUIT')
-                    return
+                print(line.strip('\n'))
         # out of the for loop, need to type the end Command
         # for the DATA part
         print('.\n')
         print('QUIT')
-        return
+        sys.exit(0)
+
+if __name__ == '__main__':
+    file_name = sys.argv[1]
+    file_reader = ForwardFileReader(file_name)
+    file_reader.start()
