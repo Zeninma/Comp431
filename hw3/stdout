@@ -1,0 +1,8 @@
+MAIL FROM: <shuo@cs.unc.edu>
+RCPT TO: <fang@gmail.com>
+DATA
+
+
+haha
+.
+QUIT

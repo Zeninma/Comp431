@@ -1,2 +1,4 @@
 #Ignore all the pdf file in the folder
 *.pdf
+*.md
+

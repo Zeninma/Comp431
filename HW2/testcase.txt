@@ -1,0 +1,20 @@
+MAIL FROM: <jeffay@cs.unc.edu>
+RCPT TO: <chen@cs.unc.edu>
+RCPT TO: <superqd@gmail.com>
+DATA
+Hey Tyler
+.
+MAIL FROM: <tyler@cs.unc.edu>
+RCPT TO: <chen@cs.unc.edu>
+RCPT TO: <dd@dd.com>
+DATA
+MAIL FROM: <FAKE@CS>
+DATA
+.
+MAIL FROM: <shuo@cs.unc.edu>
+RCPT TO: <fang@gmail.com>
+DATA
+
+
+haha
+.

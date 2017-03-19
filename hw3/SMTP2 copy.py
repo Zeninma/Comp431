@@ -30,15 +30,9 @@ class ReaderState(SuperEnum):
     '''
     an ENUM for ForwardFileReader state
     '''
-    #waiting for FROM command
     LISTEN_FROM = 1
-    #waiting for RCPT TO command
     LISTEN_TO = 2
-    #receive following line as part of DATA
     DATA_MODE = 3
-    #have already recieved one RCPT TO command,
-    #waiting for other RCPT TO command or DATA
-    LISTEN_TO_MUL = 4
 
 class Response(SuperEnum):
     '''
@@ -47,9 +41,9 @@ class Response(SuperEnum):
     OKM = 1
     ERROR = 2
 
-#########################################################################
-#######################Above are helper class, mainly ENUM ##############
-#########################################################################
+########################################################################
+#######################Above are helper class, mainly ENUM##############
+########################################################################
 
 class ForwardFileReader():
     '''
@@ -79,19 +73,22 @@ class ForwardFileReader():
         elif self.state == ReaderState.LISTEN_TO:
             if line_len > 2:
                 if line[0:3] == 'To:':
-                    self.state = ReaderState.LISTEN_TO_MUL
                     return CommandType.RCPT
             #the original document has error
-        elif self.state == ReaderState.LISTEN_TO_MUL:
-            if line_len > 2:
-                if line[0:3] == 'To:':
-                    return CommandType.RCPT
-            # empty message followed by another forward email
-            elif line_len > 4:
+            self.state = ReaderState.DATA_MODE
+            print('DATA')
+            if self.wait(SUCCESS_354) == Response.ERROR:
+                print('QUIT')
+                sys.exit(0)
+            if line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
-                    
+                    print('.')
+                    if self.wait(SUCCESS_250) == Response.ERROR:
+                        print('QUIT')
+                        sys.exit(0)
                     return CommandType.NEWSTART
+            return CommandType.DATA
         else:
             if line_len > 4:
                 if line[0:5] == 'From:':
@@ -109,7 +106,7 @@ class ForwardFileReader():
         wait for SMTP server's response
         and return status accordingly
         '''
-        raw_response = raw_input()
+        raw_response = input()
         raw_response_length = len(raw_response)
         response = raw_response + '\n'
         sys.stderr.write(response)
@@ -156,9 +153,7 @@ class ForwardFileReader():
             else:
                 print(line.strip('\n'))
         # out of the for loop, need to type the end Command
-        # Need to check the case, where the file ends with empty data part
         # for the DATA part
-        # the whole file ends with empty message
         print('.')
         if self.wait(SUCCESS_354) == Response.ERROR:
             print('QUIT')

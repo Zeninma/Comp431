@@ -150,6 +150,7 @@ def parse_domain(cmd, pos):
     parse <domain> by checking whether if
     the domain has at list one a followed by let-dig-str
     '''
+    # pdb.set_trace()
     if (pos+1) > (len(cmd)-1):
         print('ERROR -- domain')
         return 0
@@ -176,7 +177,7 @@ def parse_mailbox(cmd, pos):
     '''
     parse <mailbox>
     '''
-    pdb.set_trace()
+    # pdb.set_trace()
     pos = parse_local_part(cmd, pos)
     if pos == 0:
         return 0
@@ -237,7 +238,7 @@ def parse_mail_from_cmd(cmd, pos):
         print('ERROR -- mail-from-cmd')
         return 0
     else:
-        pos += 4
+        pos += 3
     # now cmd[pos] must be ' '
     pos = parse_whitespace(cmd, pos)
     if pos == 0:
@@ -272,11 +273,126 @@ def parse_mail_from_cmd(cmd, pos):
 
     if cmd[pos] == '\n':
         print('Sender ok')
+        return pos
     else:
         print('ERROR -- mail-from-cmd')
+        return 0
+
+
+def parse_rcpt_to(cmd, pos):
+    '''
+    parse <rcpt_to_cmd> at root
+    '''
+    if len(cmd) < 8:
+        print('ERROR -- mail-from-cmd')
+        return 0
+    if cmd[0:4] != 'RCPT':
+        print('ERROR -- mail-from-cmd')
+        return 0
+    else:
+        pos += 3
+    pdb.set_trace()
+    pos = parse_whitespace(cmd, pos)
+    if pos == 0:
+        return 0
+    else:
+        pos += 1
+    #Debug
+    if cmd[pos:pos+3] != 'TO:':
+        print('ERROR -- mail-from-cmd')
+        return 0
+    else:
+        pos += 2
+
+    pos = parse_null_space(cmd, pos)
+    if pos == 0:
+        print('ERROR -- mail-from-cmd')
+        return 0
+    pos = parse_path(cmd, pos)
+    if pos == 0:
+        return 0
+
+    pos = parse_null_space(cmd, pos)
+    if (pos+1) > (len(cmd)-1):
+        print('ERROR -- path')
+        return 0
+    else:
+        pos += 1
+
+    if cmd[pos] == '\n':
+        print('Sender ok')
+        return pos
+    else:
+        print('ERROR -- mail-from-cmd')
+        return 0
+
+
+def parse_data_cmd(cmd, pos):
+    '''
+    Keyword Argument:
+        cmd
+        pos
+    parse data cmd from the root
+    '''
+    if len(cmd) < 5:
+        print('500 Syntax error: command unrecognized')
+        return 0
+    if cmd[0:4] != 'DATA':
+        print('500 Syntax error: command unrecognized')
+        return 0
+    pos = 4
+    pos = parse_null_space(cmd, pos)
+    if len(cmd) < pos + 1:
+        print('500 Syntax error: command unrecognized')
+        return 0
+    if cmd[pos + 1] != '\n':
+        print('500 Syntax error: command unrecognized')
+        return 0
+    else:
+        print('354 Start mail input; end with <CRLF>.<CRLF>')
+        return 1
+
+
+def build_str(str_builder, new_str):
+    '''
+    add new input to the string culmulatively
+    '''
+    str_builder = str_builder + new_str
+    return str_builder
+
+
+def is_end(data, new_data):
+    '''
+    check whether the data input is ended
+    '''
+    if (new_data == '.\n') and (data[-1] == '\n'):
+        return True
+    else:
+        return False
+
+
+def construct_smtp(cmd):
+    '''
+    acts like a state machine, consume input to change phase
+    '''
+    str_builder = ''
+    line_reader = sys.stdin
+    #Consume the line and check its validity for mail from cmd
+    cmd = line_reader.readline()
+    if parse_mail_from_cmd(cmd, 0) == 1:
+        str_builder = build_str(str_builder, cmd)
+        print(cmd)
+        print('250 OK')
+    #Consume the line and check its validity for RCPT command
+    cmd = line_reader.readline()
+    if parse_rcpt_to(cmd, 0) == 1:
+        str_builder = build_str(str_builder, cmd)
+        print(cmd)
+        print('250 OK')
+    #Consume the line, see whether it is another rcpt_to_cmd or
+    #a data, and keep adding rcpt if the line is a valid rcpt command
 
 
 if __name__ == '__main__':
     for line in sys.stdin:
-        print(line[:len(line)-1])
-        parse_mail_from_cmd(line, -1)
+        parse_rcpt_to(line, 0)
