@@ -63,6 +63,14 @@ class ForwardFileReader():
         '''
         self.state = ReaderState.LISTEN_FROM
         self.file = open(file_name, "r")
+    
+    def quit(self):
+        '''
+        A helper function for print 'QUIT' command
+        and then exit
+        '''
+        print('QUIT')
+        sys.exit(0)
 
     def type_check(self, line):
         '''
@@ -90,16 +98,23 @@ class ForwardFileReader():
             elif line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
-                    
+                    print('DATA')
+                    if self.wait(SUCCESS_354) == Response.ERROR:
+                        self.quit()
+                    print('.')
                     return CommandType.NEWSTART
+                else:
+                    print('DATA')
+                    if self.wait(SUCCESS_354) == Response.ERROR:
+                        self.quit()
+                    return CommandType.DATA
         else:
             if line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
                     print('.')
                     if self.wait(SUCCESS_250) == Response.ERROR:
-                        print('QUIT')
-                        sys.exit(0)
+                        self.quit()
                     return CommandType.NEWSTART
             else:
                 return CommandType.DATA
@@ -134,24 +149,21 @@ class ForwardFileReader():
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
-                    print('QUIT')
-                    sys.exit(0)
+                    self.quit()
             elif cmd_type == CommandType.RCPT:
                 if len(line) > 4:
                     print('RCPT TO: ' + line[4:].strip('\n'))
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
-                    print('QUIT')
-                    sys.exit(0)
+                    self.quit()
             elif cmd_type == CommandType.NEWSTART:
                 if len(line) > 7:
                     print('MAIL FROM: ' + line[6:].strip('\n'))
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
-                    print('QUIT')
-                    sys.exit(0)
+                    self.quit()
             #Then the line must be a part of the DATA
             else:
                 print(line.strip('\n'))
@@ -159,12 +171,21 @@ class ForwardFileReader():
         # Need to check the case, where the file ends with empty data part
         # for the DATA part
         # the whole file ends with empty message
-        print('.')
-        if self.wait(SUCCESS_354) == Response.ERROR:
-            print('QUIT')
-            sys.exit(0)
-        print('QUIT')
-        sys.exit(0)
+        if self.state == ReaderState.DATA_MODE:
+            print('.')
+            if self.wait(SUCCESS_250) == Response.ERROR:
+                self.quit()
+            self.quit()
+        elif self.state == ReaderState.LISTEN_TO_MUL:
+            print('DATA')
+            if self.wait(SUCCESS_354) == Response.ERROR:
+                self.quit()
+            print('.')
+            if self.wait(SUCCESS_250) == Response.ERROR:
+                self.quit()
+            self.quit()
+        else:
+            self.quit()
 
 if __name__ == '__main__':
     file_name = sys.argv[1]
