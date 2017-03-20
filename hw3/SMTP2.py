@@ -95,7 +95,7 @@ class ForwardFileReader():
                 if line[0:3] == 'To:':
                     return CommandType.RCPT
             # empty message followed by another forward email
-            elif line_len > 4:
+            if line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
                     print('DATA')
@@ -105,9 +105,15 @@ class ForwardFileReader():
                     return CommandType.NEWSTART
                 else:
                     print('DATA')
+                    self.state = ReaderState.DATA_MODE
                     if self.wait(SUCCESS_354) == Response.ERROR:
                         self.quit()
                     return CommandType.DATA
+            print('DATA')
+            self.state = ReaderState.DATA_MODE
+            if self.wait(SUCCESS_354) == Response.ERROR:
+                self.quit()
+            return CommandType.DATA
         else:
             if line_len > 4:
                 if line[0:5] == 'From:':
