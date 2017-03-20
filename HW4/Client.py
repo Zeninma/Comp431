@@ -61,19 +61,24 @@ class ForwardFileReader():
     After ouputing each command, pause and wait for SMTP server respond.
     Quit if there is any error or reaching the end of the forward file.
     '''
-    def __init__(self, file_name):
+    def __init__(self, new_mail_content, new_socket):
         '''
         constructor for Forwar_file_reader
+        KeyArgument:
+        new_mail_content: A list of lines of mail content.
+        new_socket: The client socket
         '''
         self.state = ReaderState.LISTEN_FROM
-        self.file = open(file_name, "r")
+        self.mail_content = new_mail_content
+        self.client_socket = new_socket
 
     def quit(self):
         '''
         A helper function for print 'QUIT' command
         and then exit
         '''
-        print('QUIT')
+        socket.send('QUIT'.encode())
+        socket.close()
         sys.exit(0)
 
     def type_check(self, line):
@@ -102,18 +107,18 @@ class ForwardFileReader():
             if line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
-                    print('DATA')
+                    socket.send('DATA'.encode())
                     if self.wait(SUCCESS_354) == Response.ERROR:
                         self.quit()
-                    print('.')
+                    socket.send('.'.encode())
                     return CommandType.NEWSTART
                 else:
-                    print('DATA')
+                    socket.send('DATA'.encode())
                     self.state = ReaderState.DATA_MODE
                     if self.wait(SUCCESS_354) == Response.ERROR:
                         self.quit()
                     return CommandType.DATA
-            print('DATA')
+            socket.send('DATA'.encode)
             self.state = ReaderState.DATA_MODE
             if self.wait(SUCCESS_354) == Response.ERROR:
                 self.quit()
@@ -122,7 +127,7 @@ class ForwardFileReader():
             if line_len > 4:
                 if line[0:5] == 'From:':
                     self.state = ReaderState.LISTEN_TO
-                    print('.')
+                    socket.send('.'.encode())
                     if self.wait(SUCCESS_250) == Response.ERROR:
                         self.quit()
                     return CommandType.NEWSTART
@@ -134,10 +139,12 @@ class ForwardFileReader():
         wait for SMTP server's response
         and return status accordingly
         '''
-        raw_response = raw_input()
+        raw_response = socket.recv(1024).decode()
         raw_response_length = len(raw_response)
-        response = raw_response + '\n'
-        sys.stderr.write(response)
+        #The original response sent by the sever contains new line at the end now
+        # response = raw_response + '\n'
+        # No stderr for the response
+        # sys.stderr.write(response)
         if raw_response_length < 4:
             return Response.ERROR
         else:
@@ -150,47 +157,47 @@ class ForwardFileReader():
         '''
         start processing forward file
         '''
-        for line in self.file.readlines():
+        for line in self.mail_content:
             # pdb.set_trace()
             cmd_type = self.type_check(line)
             if cmd_type == CommandType.MAIL_FROM:
                 if len(line) > 7:
-                    print('MAIL FROM: ' + line[6:].strip('\n'))
+                    socket.send(('MAIL FROM: ' + line[6:].strip('\n')).encode())
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
                     self.quit()
             elif cmd_type == CommandType.RCPT:
                 if len(line) > 4:
-                    print('RCPT TO: ' + line[4:].strip('\n'))
+                    socket.send(('RCPT TO: ' + line[4:].strip('\n')).encode())
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
                     self.quit()
             elif cmd_type == CommandType.NEWSTART:
                 if len(line) > 7:
-                    print('MAIL FROM: ' + line[6:].strip('\n'))
+                    socket.send(('MAIL FROM: ' + line[6:].strip('\n')).encodoe())
                 else:
                     print(FORWARD_FILE_ERROR)
                 if self.wait(SUCCESS_250) == Response.ERROR:
                     self.quit()
             #Then the line must be a part of the DATA
             else:
-                print(line.strip('\n'))
+                socket.send(line.strip('\n').encode())
         # out of the for loop, need to type the end Command
         # Need to check the case, where the file ends with empty data part
         # for the DATA part
         # the whole file ends with empty message
         if self.state == ReaderState.DATA_MODE:
-            print('.')
+            socket.send('.'.encode())
             if self.wait(SUCCESS_250) == Response.ERROR:
                 self.quit()
             self.quit()
         elif self.state == ReaderState.LISTEN_TO_MUL:
-            print('DATA')
+            socket.send('DATA'.encode())
             if self.wait(SUCCESS_354) == Response.ERROR:
                 self.quit()
-            print('.')
+            socket.send('.'.encode())
             if self.wait(SUCCESS_250) == Response.ERROR:
                 self.quit()
             self.quit()
@@ -200,11 +207,12 @@ class ForwardFileReader():
 ###########################SMTP2 Ends###############################
 ####################################################################
 
-FROM_MESSAGE = 'From:'
-REENTER_FROM_MESSAGE = 'Please re enter the domain for the FROM: field'
-TO_LIST_MESSAGE = 'Please enter a list of recepients split by commas'
-REENTER_TO_LIST_MESSAGE = 'Please re enter the domain for the TO: field'
-SUBJECT_MESSAGE = 'SUBJECT'
+FROM_MESSAGE = 'From:\n'
+REENTER_FROM_MESSAGE = 'Please re enter the domain for the FROM: field:\n'
+TO_LIST_MESSAGE = 'Please enter a list of recepients split by commas\n'
+REENTER_TO_LIST_MESSAGE = 'Please re enter the domain for the TO: field\n'
+SUBJECT_MESSAGE = 'SUBJECT:\n'
+MESSAGE_MESSAGE = 'MESSAGE:\n'
 
 SPECIAL_SPACE = '<>()\t[]\.,;:@" '
 
@@ -412,8 +420,10 @@ class Ao_Client():
         self.message = ''
         self.message_to_server = ''
         self.receipt_list = []
+        self.message_line_list = []
         self.subject = ''
         self.client_socket = None
+        self.sender = None
 
     def parse_from_cmd(self):
         '''
@@ -462,9 +472,11 @@ class Ao_Client():
         '''
         parse the message
         '''
+        pdb.set_trace()
+        print(MESSAGE_MESSAGE)
         for line in sys.stdin:
-            if line == '.':
-                return
+            if line == '.\n':
+                break
             else:
                 self.message += line
 
@@ -498,12 +510,15 @@ class Ao_Client():
         self.message_to_server += '\n'
         #body of the message
         self.message_to_server += self.message
+        self.message_line_list = self.message.split('\n')
 
     def send_mail(self):
         '''
         Interacte with the server and send the mail
         '''
-
+        self.sender = ForwardFileReader(self.message_line_list, self.client_socket)
+        # the sender will close the socket when it quits
+        self.sender.start()
 
     def wait_greeting(self):
         '''
@@ -528,3 +543,15 @@ class Ao_Client():
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.client_socket.connect((self.serverName, self.serverPort))
         self.wait_greeting()
+
+    def start(self):
+        '''
+        Start the client process
+        '''
+        self.take_input_message()
+        pdb.set_trace()
+        self.make_connection()
+
+if __name__ == '__main__':
+    client = Ao_Client(sys.argv[1], sys.argv[2])
+    client.start()
