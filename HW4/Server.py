@@ -38,6 +38,7 @@ class State(SuperEnum):
     RCPT = 2
     RCPTORDATA = 3
     DATA = 4
+    QUIT = 5
 
 class CommandType(SuperEnum):
     '''
@@ -47,6 +48,7 @@ class CommandType(SuperEnum):
     RCPT = 2
     DATA = 3
     ERROR = 4
+    QUIT = 5
 
 def is_whitespace(character):
     '''
@@ -380,12 +382,13 @@ def smtp_automaton(server_socket):
     mail_from = ''
     mail_to = []
     data = ''
-    for line in sys.stdin:
+    while state != State.QUIT:
+        line = server_socket.recv(1024).decode()
         server_socket.send(line[0:len(line)-1].encode())
         if state == State.DATA:
             if line == '.\n':
                 #end message and start outputing
-                print(SUCCESS)
+                server_socket.send(SUCCESS.encode())
                 output(mail_to, data)
                 mail_from = ''
                 mail_to = []
@@ -397,28 +400,30 @@ def smtp_automaton(server_socket):
             #Consume input and alter state
             cmd_type = check_cmd(line)
             if cmd_type == CommandType.ERROR:
-                print(ERROR500)
+                server_socket.send(ERROR500.encode())
                 state = State.INITIAL
                 mail_from = ''
                 mail_to = []
                 data = ''
+            elif cmd_type == CommandType.QUIT:
+                state = State.QUIT
             elif cmd_type == CommandType.MAIL_FROM:
                 if state == State.INITIAL:
                     parse_result = parse_mail_from_cmd(line, 0)
                     if parse_result == 0:
-                        print(ERROR501)
+                        server_socket.send(ERROR501.encode())
                         state = State.INITIAL
                         mail_from = ''
                         mail_to = []
                         data = ''
                     else:
-                        print(SUCCESS)
+                        server_socket.send(SUCCESS.encode())
                         path_start_pos = line.find('<')
                         mail_from = line[path_start_pos:len(line) - 1]
                         data += 'From: ' + mail_from + '\n'
                         state = State.RCPT
                 else:
-                    print(ERROR503)
+                    server_socket.send(ERROR503.encode())
                     state = State.INITIAL
                     mail_from = ''
                     mail_to = []
@@ -427,20 +432,21 @@ def smtp_automaton(server_socket):
                 if state == State.RCPT or state == State.RCPTORDATA:
                     parse_result = parse_rcpt_cmd(line, 0)
                     if parse_result == 0:
-                        print(ERROR501)
+                        server_socket.send(ERROR501.encode())
                         state = State.INITIAL
                         mail_from = ''
                         mail_to = []
                         data = ''
                     else:
-                        print(SUCCESS)
+                        server_socket.send(SUCCESS.encode())
                         path_start_pos = line.find('<')
-                        mail_to.append(line[path_start_pos+1:len(line) - 2])
+                        domain_start_pos = line.find('@')
+                        mail_to.append(line[domain_start_pos+1:len(line) - 2])
                         data += 'To: ' + line[path_start_pos:len(line) - 1] + '\n'
                         if state == State.RCPT:
                             state = State.RCPTORDATA
                 else:
-                    print(ERROR503)
+                    server_socket.send(ERROR503.encode())
                     state = State.INITIAL
                     mail_from = ''
                     mail_to = []
@@ -450,16 +456,16 @@ def smtp_automaton(server_socket):
                 if state == State.RCPTORDATA:
                     parse_result = parse_data_cmd(line, 0)
                     if parse_result == 0:
-                        print(ERROR501)
+                        server_socket.send(ERROR501)
                         state = State.INITIAL
                         mail_from = ''
                         mail_to = []
                         data = ''
                     else:
-                        print(DATABEGIN)
+                        server_socket.send(DATABEGIN)
                         state = State.DATA
                 else:
-                    print(ERROR503)
+                    server_socket.send(ERROR503)
                     state = State.INITIAL
                     mail_from = ''
                     mail_to = []
@@ -495,6 +501,15 @@ def greet(server_socket):
     # recieve the HELO command
     command = connection_socket.recv(1024).decode()
     parse_HELO_command(command, server_socket)
+    smtp_automaton(server_socket)
+    server_socket.close()
+    start_listening(server_socket)
+
+def start_listening(server_socket):
+    '''
+    Prepare to enter the loop process.
+    '''
+    greet(server_socket)
 
 def start_server():
     '''
@@ -507,5 +522,5 @@ def start_server():
     # the server now is ready to listen for incoming TCP requests
     start_listening(server_socket)
 
-def start_listening(server_socket):
-    greet(server_socket)
+if __name__ == '__main__':
+    start_server()
