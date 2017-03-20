@@ -2,6 +2,204 @@ import sys
 import pdb
 from socket import *
 
+####################################################################
+###########################SMTP2 Begin##############################
+####################################################################
+SUCCESS_250 = '250 '
+SUCCESS_354 = '354 '
+FORWARD_FILE_ERROR = 'ERROR IN ORIGINAL FORWARD FILE'
+
+class SuperEnum(object):
+    '''
+    an Enum built for Python 2.7
+    original source:
+    http://codereview.stackexchange.com/questions/109724/yet-another-lightweight-enum-for-python-2-7
+    '''
+    class __metaclass__(type):
+        def __iter__(self):
+            for item in self.__dict__:
+                if item == self.__dict__[item]:
+                    yield item
+
+class CommandType(SuperEnum):
+    '''
+    Enum for command type
+    '''
+    MAIL_FROM = 1
+    RCPT = 2
+    DATA = 3
+    NEWSTART = 4
+
+class ReaderState(SuperEnum):
+    '''
+    an ENUM for ForwardFileReader state
+    '''
+    #waiting for FROM command
+    LISTEN_FROM = 1
+    #waiting for RCPT TO command
+    LISTEN_TO = 2
+    #receive following line as part of DATA
+    DATA_MODE = 3
+    #have already recieved one RCPT TO command,
+    #waiting for other RCPT TO command or DATA
+    LISTEN_TO_MUL = 4
+
+class Response(SuperEnum):
+    '''
+    an ENUM for response from SMTP server
+    '''
+    OKM = 1
+    ERROR = 2
+
+#########################################################################
+#######################Above are helper class, mainly ENUM ##############
+#########################################################################
+
+class ForwardFileReader():
+    '''
+    Read a forward file, and then generate SMTP command correspondingly.
+    After ouputing each command, pause and wait for SMTP server respond.
+    Quit if there is any error or reaching the end of the forward file.
+    '''
+    def __init__(self, file_name):
+        '''
+        constructor for Forwar_file_reader
+        '''
+        self.state = ReaderState.LISTEN_FROM
+        self.file = open(file_name, "r")
+
+    def quit(self):
+        '''
+        A helper function for print 'QUIT' command
+        and then exit
+        '''
+        print('QUIT')
+        sys.exit(0)
+
+    def type_check(self, line):
+        '''
+        check the command type of the input line,
+        then echo the input line, and return the
+        command's type
+        '''
+        line_len = len(line)
+        if self.state == ReaderState.LISTEN_FROM:
+            if line_len > 4:
+                if line[0:5] == 'From:':
+                    self.state = ReaderState.LISTEN_TO
+                    return CommandType.MAIL_FROM
+        elif self.state == ReaderState.LISTEN_TO:
+            if line_len > 2:
+                if line[0:3] == 'To:':
+                    self.state = ReaderState.LISTEN_TO_MUL
+                    return CommandType.RCPT
+            #the original document has error
+        elif self.state == ReaderState.LISTEN_TO_MUL:
+            if line_len > 2:
+                if line[0:3] == 'To:':
+                    return CommandType.RCPT
+            # empty message followed by another forward email
+            if line_len > 4:
+                if line[0:5] == 'From:':
+                    self.state = ReaderState.LISTEN_TO
+                    print('DATA')
+                    if self.wait(SUCCESS_354) == Response.ERROR:
+                        self.quit()
+                    print('.')
+                    return CommandType.NEWSTART
+                else:
+                    print('DATA')
+                    self.state = ReaderState.DATA_MODE
+                    if self.wait(SUCCESS_354) == Response.ERROR:
+                        self.quit()
+                    return CommandType.DATA
+            print('DATA')
+            self.state = ReaderState.DATA_MODE
+            if self.wait(SUCCESS_354) == Response.ERROR:
+                self.quit()
+            return CommandType.DATA
+        else:
+            if line_len > 4:
+                if line[0:5] == 'From:':
+                    self.state = ReaderState.LISTEN_TO
+                    print('.')
+                    if self.wait(SUCCESS_250) == Response.ERROR:
+                        self.quit()
+                    return CommandType.NEWSTART
+            else:
+                return CommandType.DATA
+
+    def wait(self, response_num):
+        '''
+        wait for SMTP server's response
+        and return status accordingly
+        '''
+        raw_response = raw_input()
+        raw_response_length = len(raw_response)
+        response = raw_response + '\n'
+        sys.stderr.write(response)
+        if raw_response_length < 4:
+            return Response.ERROR
+        else:
+            if raw_response[0:4] == response_num:
+                return Response.OKM
+            else:
+                return Response.ERROR
+
+    def start(self):
+        '''
+        start processing forward file
+        '''
+        for line in self.file.readlines():
+            # pdb.set_trace()
+            cmd_type = self.type_check(line)
+            if cmd_type == CommandType.MAIL_FROM:
+                if len(line) > 7:
+                    print('MAIL FROM: ' + line[6:].strip('\n'))
+                else:
+                    print(FORWARD_FILE_ERROR)
+                if self.wait(SUCCESS_250) == Response.ERROR:
+                    self.quit()
+            elif cmd_type == CommandType.RCPT:
+                if len(line) > 4:
+                    print('RCPT TO: ' + line[4:].strip('\n'))
+                else:
+                    print(FORWARD_FILE_ERROR)
+                if self.wait(SUCCESS_250) == Response.ERROR:
+                    self.quit()
+            elif cmd_type == CommandType.NEWSTART:
+                if len(line) > 7:
+                    print('MAIL FROM: ' + line[6:].strip('\n'))
+                else:
+                    print(FORWARD_FILE_ERROR)
+                if self.wait(SUCCESS_250) == Response.ERROR:
+                    self.quit()
+            #Then the line must be a part of the DATA
+            else:
+                print(line.strip('\n'))
+        # out of the for loop, need to type the end Command
+        # Need to check the case, where the file ends with empty data part
+        # for the DATA part
+        # the whole file ends with empty message
+        if self.state == ReaderState.DATA_MODE:
+            print('.')
+            if self.wait(SUCCESS_250) == Response.ERROR:
+                self.quit()
+            self.quit()
+        elif self.state == ReaderState.LISTEN_TO_MUL:
+            print('DATA')
+            if self.wait(SUCCESS_354) == Response.ERROR:
+                self.quit()
+            print('.')
+            if self.wait(SUCCESS_250) == Response.ERROR:
+                self.quit()
+            self.quit()
+        else:
+            self.quit()
+####################################################################
+###########################SMTP2 Ends###############################
+####################################################################
+
 FROM_MESSAGE = 'From:'
 REENTER_FROM_MESSAGE = 'Please re enter the domain for the FROM: field'
 TO_LIST_MESSAGE = 'Please enter a list of recepients split by commas'
@@ -9,7 +207,6 @@ REENTER_TO_LIST_MESSAGE = 'Please re enter the domain for the TO: field'
 SUBJECT_MESSAGE = 'SUBJECT'
 
 SPECIAL_SPACE = '<>()\t[]\.,;:@" '
-
 
 def is_whitespace(character):
     '''
@@ -199,6 +396,7 @@ def parse_mailbox(cmd, pos):
         return 0
 
     return pos
+
 ####################################################################
 ###########################Begain Client Part#######################
 ####################################################################
@@ -214,6 +412,8 @@ class Ao_Client():
         self.message = ''
         self.message_to_server = ''
         self.receipt_list = []
+        self.subject = ''
+        self.client_socket = None
 
     def parse_from_cmd(self):
         '''
@@ -222,7 +422,7 @@ class Ao_Client():
         from_domain = raw_input(FROM_MESSAGE)
         while parse_mailbox(from_domain, 0) == 0:
             from_domain = raw_input(REENTER_FROM_MESSAGE)
-        self.domain = from_domain
+        self.from_domain = from_domain
 
     def not_qualified_receipt_list(self):
         '''
@@ -277,13 +477,49 @@ class Ao_Client():
         self.parse_subject_cmd()
         self.parse_message_cmd()
 
+    def form_message(self):
+        '''
+        Form the intergrated message that is going to be sent
+        to the sever.
+        '''
+        #MAIL FROM: mail_box
+        self.message_to_server += 'MAIL FROM: ' + self.from_domain + '\n'
+        #RCPT TO: mail_box
+        for receipt in self.receipt_list:
+            self.message_to_server += 'RCPT TO: ' + receipt + '\n'
+        #FROM: mail_box
+        self.message_to_server += 'FROM: ' + self.from_domain + '\n'
+        #TO: mail_box
+        for receipt in self.receipt_list:
+            self.message_to_server += 'TO: ' + receipt + '\n'
+        #SUBJECT: subject
+        self.message_to_server += 'SUBJECT: ' + self.subject + '\n'
+        #empty line followed by message
+        self.message_to_server += '\n'
+        #body of the message
+        self.message_to_server += self.message
+
+    def send_mail(self):
+        '''
+        Interacte with the server and send the mail
+        '''
+
+
     def wait_greeting(self):
         '''
         To Receive the greeting message from the server
         '''
+        #receive greeting
         self.client_socket.recv(1024)
         helo_message = 'HELO ' + self.domain + '\n'
+        #send HELO and receive 250 ack
         self.client_socket.send(helo_message.encode())
+        ack_num = self.client_socket.recv(1024).decode()
+        ack_num = int(ack_num[0:3])
+        if ack_num == 250:
+            self.form_message()
+            self.send_mail()
+
 
     def make_connection(self):
         '''
